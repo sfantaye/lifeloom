@@ -46,7 +46,6 @@ LifeLoom helps users turn life goals into actionable weekly plans using FastAPI,
     ```env
     OPENAI_API_KEY="your_openai_api_key_here"
     ```
-    (A `.env.example` file can be provided as a template).
 
 5.  **Run the FastAPI application:**
     Navigate to the `lifeloom` root directory in your terminal.
