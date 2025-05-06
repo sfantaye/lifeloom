@@ -1,1 +1,8 @@
-
+fastapi
+uvicorn[standard]
+jinja2
+langchain
+langgraph
+langchain-openai
+python-dotenv
+httpx # For LangChain if making external calls, good to have
