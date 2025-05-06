@@ -3,27 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LifeLoom - AI Goal Planner</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+    <title>LifeLoom - Weave Your Future</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Rajdhani:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-glow: #00f2ff; /* Bright Cyan */
+            --secondary-glow: #801268; /* Bright Magenta */
+            --tertiary-glow: #7a00ec;  /* Vibrant Purple */
+            --dark-bg: #1a122f; /* Deep Space Purple */
+            --card-bg: rgba(43, 32, 76, 0.8); /* Slightly lighter purple, semi-transparent */
+            --text-color: #e0e0e0;
+            --text-accent: #f0f0f0;
+            --border-color: rgba(168, 85, 247, 0.3); /* Translucent purple for borders */
+            --input-bg: rgba(60, 45, 100, 0.7);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 5px var(--primary-glow), 0 0 10px var(--primary-glow), 0 0 15px var(--secondary-glow); }
+            50% { box-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow), 0 0 30px var(--secondary-glow); }
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif; /* Sci-fi feel */
+            line-height: 1.7;
+            margin: 0;
+            padding: 0;
+            background-color: var(--dark-bg);
+            background-image:
+                radial-gradient(circle at 20% 20%, hsla(270, 80%, 30%, 0.3) 0%, transparent 30%),
+                radial-gradient(circle at 80% 70%, hsla(300, 70%, 40%, 0.25) 0%, transparent 35%),
+                linear-gradient(135deg, var(--dark-bg) 0%, #0d091a 100%); /* Darker gradient */
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 40px 20px; /* More padding around the container */
+            overflow-x: hidden; /* Prevent horizontal scroll from glows */
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            backdrop-filter: blur(10px); /* Frosted glass effect */
+            padding: 40px;
+            border-radius: 15px; /* More rounded */
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.1), 0 0 60px rgba(255, 0, 200, 0.05); /* Soft ambient glow */
+            width: 100%;
+            max-width: 850px; /* Slightly wider */
+            margin: 20px;
+            animation: fadeIn 0.8s ease-out;
+            position: relative; /* For pseudo-elements */
+        }
+
+        /* Decorative "threads" */
+        .container::before, .container::after {
+            content: '';
+            position: absolute;
+            z-index: -1;
+            opacity: 0.3;
+        }
+        .container::before {
+            width: 2px;
+            height: 150%;
+            background: linear-gradient(var(--primary-glow), transparent, var(--secondary-glow));
+            left: 20px;
+            top: -25%;
+            transform: rotate(-15deg);
+        }
+        .container::after {
+            width: 300px;
+            height: 2px;
+            background: linear-gradient(to right, var(--tertiary-glow), transparent, var(--primary-glow));
+            right: -50px;
+            bottom: 30%;
+            transform: rotate(5deg);
+        }
+
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            position: relative; /* For the glowing line */
+        }
+        header::after { /* Glowing underline for header */
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow));
+            border-radius: 3px;
+            box-shadow: 0 0 8px var(--primary-glow), 0 0 12px var(--secondary-glow);
+        }
+
+        header h1 {
+            font-family: 'Orbitron', sans-serif; /* More techy font for title */
+            color: var(--text-accent);
+            margin: 0 0 5px 0;
+            font-size: 3.5em; /* Larger */
+            font-weight: 700;
+            text-shadow: 0 0 5px var(--primary-glow), 0 0 10px var(--primary-glow);
+        }
+        header h1 .sparkle { /* For the sparkle emoji */
+            display: inline-block;
+            animation: pulseGlow 2s infinite ease-in-out; /* Make the emoji pulse */
+            filter: drop-shadow(0 0 3px var(--primary-glow));
+        }
+        header h2 { /* For your name */
+            font-family: 'Rajdhani', sans-serif;
+            color: white;
+            font-size: 1.5em;
+            font-weight: 400;
+            margin: 0 0 10px 0;
+            letter-spacing: 1px;
+        }
+
+        header p {
+            color: var(--text-color);
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        .goal-form .form-group {
+            margin-bottom: 25px;
+            animation: fadeIn 0.5s ease-out backwards;
+        }
+        .goal-form .form-group:nth-child(1) { animation-delay: 0.1s; }
+        .goal-form .form-group:nth-child(2) { animation-delay: 0.2s; }
+
+
+        .goal-form label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 700; /* Bolder labels */
+            color: var(--primary-glow);
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .goal-form input[type="text"],
+        .goal-form select {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1.1em;
+            background-color: var(--input-bg);
+            color: var(--text-accent);
+            font-family: 'Rajdhani', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .goal-form input[type="text"]::placeholder {
+            color: rgba(224, 224, 224, 0.5);
+        }
+
+        .goal-form input[type="text"]:focus,
+        .goal-form select:focus {
+            outline: none;
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 0 3px rgba(0, 242, 255, 0.3), 0 0 15px rgba(0, 242, 255, 0.2) inset;
+            background-color: rgba(60, 45, 100, 0.9);
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, var(--primary-glow), var(--secondary-glow));
+            color: var(--dark-bg); /* Dark text on bright button for contrast */
+            padding: 16px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.2), 0 2px 8px rgba(255, 0, 200, 0.15);
+            animation: fadeIn 0.5s ease-out backwards;
+            animation-delay: 0.3s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(0, 242, 255, 0.3), 0 4px 15px rgba(255, 0, 200, 0.25);
+        }
+        .submit-btn:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        .plan-output {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border-color);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .plan-output h2 {
+            color: var(--text-accent);
+            text-align: center;
+            margin-bottom: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2em;
+            text-shadow: 0 0 3px var(--tertiary-glow);
+        }
+
+        .plan-details {
+            display: grid;
+            gap: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        }
+
+        .week-card {
+            background-color: var(--card-bg); /* Same as main container for consistency */
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3), 0 0 10px rgba(168, 85, 247, 0.1) inset;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: fadeIn 0.5s ease-out backwards;
+            /* Staggered animation for cards */
+        }
+        /* Stagger week-card animations using Jinja loop index if possible,
+           otherwise, fallback to JS or just accept simultaneous animation */
+
+        .week-card:hover {
+            transform: translateY(-5px) scale(1.01);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4), 0 0 20px var(--primary-glow), 0 0 15px rgba(168, 85, 247, 0.2) inset;
+        }
+
+        .week-card h3 {
+            color: var(--primary-glow);
+            margin-top: 0;
+            border-bottom: 1px dashed rgba(168, 85, 247, 0.4); /* Dashed with theme color */
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5em;
+            letter-spacing: 0.5px;
+        }
+
+        .week-card ul {
+            list-style-type: none; /* We will use pseudo-elements for custom bullets */
+            padding-left: 0;
+        }
+
+        .week-card ul li {
+            padding: 10px 0 10px 30px; /* Add padding for custom bullet */
+            border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+            color: var(--text-color);
+            position: relative; /* For custom bullet */
+            transition: color 0.3s ease;
+            font-size: 1.05em;
+        }
+        .week-card ul li:hover {
+            color: var(--text-accent);
+        }
+
+        /* Custom Bullet Point for Tasks */
+        .week-card ul li::before {
+            content: '✧'; /* Sparkle/star like bullet */
+            /* content: '»'; or '›' */
+            position: absolute;
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--secondary-glow); /* Or primary-glow */
+            font-size: 1.4em;
+            font-weight: bold;
+            transition: transform 0.3s ease, text-shadow 0.3s ease;
+        }
+        .week-card ul li:hover::before {
+            transform: translateY(-50%) rotate(360deg) scale(1.2);
+            text-shadow: 0 0 5px var(--secondary-glow);
+        }
+
+
+        .week-card ul li:last-child {
+            border-bottom: none;
+        }
+
+        .error-message {
+            background-color: rgba(255, 71, 87, 0.2); /* Darker, less jarring error red */
+            color: #ff6b81; /* Brighter error text */
+            border: 1px solid #ff6b81;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.3);
+            animation: fadeIn 0.5s ease-out;
+        }
+        .error-message h2 { color: #ff6b81; font-family: 'Orbitron', sans-serif;}
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 25px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.95em;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+        footer p a {
+            color: var(--primary-glow);
+            text-decoration: none;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        footer p a:hover {
+            color: var(--secondary-glow);
+            text-shadow: 0 0 5px var(--secondary-glow);
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) { /* Wider breakpoint */
+            header h1 { font-size: 2.8em; }
+            .week-card h3 { font-size: 1.3em; }
+            .plan-details { grid-template-columns: 1fr; }
+            .container { padding: 30px; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 20px 10px; }
+            .container { padding: 20px; margin: 10px; }
+            header h1 { font-size: 2.2em; }
+            header h2 { font-size: 1.2em; }
+            header p { font-size: 1em; }
+            .goal-form input[type="text"], .goal-form select { padding: 12px; font-size: 1em; }
+            .submit-btn { padding: 14px; font-size: 1.1em; }
+            .plan-output h2 { font-size: 1.6em; }
+            .week-card { padding: 20px; }
+        }
+
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>LifeLoom ✨</h1>
-            <p>Turn your life goals into actionable weekly plans.</p>
+            <h1>LifeLoom <span class="sparkle">✨</span></h1>
+            <h2>By Sintayehu Fantaye</h2> 
+            <p>Weave your ambitions into actionable reality.</p>
         </header>
 
         <main>
             <form action="/plan" method="post" class="goal-form">
                 <div class="form-group">
-                    <label for="goal">Your Goal:</label>
-                    <input type="text" id="goal" name="goal" placeholder="e.g., Learn Python for Data Science" required
+                    <label for="goal">Your Grand Vision:</label>
+                    <input type="text" id="goal" name="goal" placeholder="e.g., Master Quantum Entanglement" required
                            value="{{ goal_input if goal_input else '' }}">
                 </div>
                 <div class="form-group">
-                    <label for="timeframe">Timeframe:</label>
+                    <label for="timeframe">Time Weaver (Duration):</label>
                     <select id="timeframe" name="timeframe" required>
-                        <option value="1 week" {% if timeframe_input == '1 week' %}selected{% endif %}>1 Week</option>
+                        <option value="1 week" {% if timeframe_input == '1 week' %}selected{% endif %}>1 Week </option>
                         <option value="2 weeks" {% if timeframe_input == '2 weeks' %}selected{% endif %}>2 Weeks</option>
                         <option value="1 month" {% if timeframe_input == '1 month' %}selected{% endif %}>1 Month</option>
                         <option value="2 months" {% if timeframe_input == '2 months' %}selected{% endif %}>2 Months</option>
@@ -31,15 +379,16 @@
                         <option value="6 months" {% if timeframe_input == '6 months' %}selected{% endif %}>6 Months</option>
                     </select>
                 </div>
-                <button type="submit" class="submit-btn">Generate Plan</button>
+                <button type="submit" class="submit-btn">Plan My Destiny</button>
             </form>
 
             {% if plan %}
             <section class="plan-output">
-                <h2>Your Roadmap for: "{{ goal_input }}"</h2>
+                <h2>Your Cosmic Roadmap: » {{ goal_input }} «</h2>
                 <div class="plan-details">
                     {% for week_data in plan %}
-                    <div class="week-card">
+                    {# Added loop.index0 for staggered animation delay #}
+                    <div class="week-card" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
                         <h3>{{ week_data.week_title }}</h3>
                         <ul>
                             {% for task in week_data.tasks %}
@@ -52,14 +401,14 @@
             </section>
             {% elif error_message %}
             <section class="plan-output error-message">
-                <h2>Oops!</h2>
+                <h2>Houston, We Have A Tangle!</h2>
                 <p>{{ error_message }}</p>
             </section>
             {% endif %}
         </main>
 
         <footer>
-            <p>© 2024 LifeLoom. AI-Powered Planning.</p>
+            <p>© <script>document.write(new Date().getFullYear())</script> LifeLoom. <a href="https://github.com/sfantaye/lifeloom" target="_blank">View on GitHub</a> | Future Woven with Code & AI. By Sintayehu Fantaye</p>
         </footer>
     </div>
 </body>

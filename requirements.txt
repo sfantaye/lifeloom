@@ -3,6 +3,8 @@ uvicorn[standard]
 jinja2
 langchain
 langgraph
-langchain-openai
+groq 
 python-dotenv
+langchain_groq
+python-multipart
 httpx # For LangChain if making external calls, good to have

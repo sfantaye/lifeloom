@@ -1,14 +1,13 @@
 import os
 import re
-from typing import List, TypedDict, Annotated
+from typing import List, TypedDict
 from dotenv import load_dotenv
 
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq # Import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.pydantic_v1 import BaseModel, Field
 from langgraph.graph import StateGraph, END
 
-# Load environment variables (for OPENAI_API_KEY)
+# Load environment variables
 load_dotenv()
 
 # --- Define State for the Graph ---
@@ -23,18 +22,33 @@ class PlannerState(TypedDict):
 
 # 1. Node to generate the plan using LLM
 async def generate_plan_node(state: PlannerState):
-    print("---GENERATING PLAN---")
+    print("---GENERATING PLAN (USING GROQ)---")
     goal = state["goal"]
     timeframe = state["timeframe"]
 
-    # It's good practice to ensure API key is available
-    if not os.getenv("OPENAI_API_KEY"):
+    # Check for Groq API key
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if not groq_api_key:
         return {
-            "error_message": "OpenAI API key not found. Please set it in your .env file.",
-            "parsed_plan": [] # Ensure this key exists even on error
+            "error_message": "Groq API key not found. Please set GROQ_API_KEY in your .env file.",
+            "parsed_plan": []
         }
 
-    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7) # Or "gpt-4o" or "gpt-4-turbo"
+    # Initialize ChatGroq
+    # Common models on Groq: "llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it"
+    # Check Groq's documentation for the latest available models.
+    try:
+        llm = ChatGroq(
+            groq_api_key=groq_api_key,
+            model_name="llama3-8b-8192", # Or "mixtral-8x7b-32768"
+            temperature=0.7
+        )
+    except Exception as e:
+        print(f"Error initializing ChatGroq: {e}")
+        return {
+            "error_message": f"Failed to initialize LLM client: {str(e)}",
+            "parsed_plan": []
+        }
 
     prompt_template = ChatPromptTemplate.from_messages(
         [
@@ -44,7 +58,8 @@ async def generate_plan_node(state: PlannerState):
                 "Your task is to break down a user's high-level goal into a structured, actionable weekly plan. "
                 "Ensure the plan is realistic for the given timeframe. "
                 "Output the plan in Markdown format. Each week should start with '## Week X: [Week Title]' "
-                "followed by a bulleted list of tasks for that week. Do not include any introductory or concluding text outside this format."
+                "followed by a bulleted list of tasks for that week. Do not include any introductory or concluding text outside this format. "
+                "Be concise and focus on the tasks for each week." # Added a bit more for clarity, model dependent
             ),
             (
                 "human",
@@ -59,23 +74,27 @@ async def generate_plan_node(state: PlannerState):
         response = await chain.ainvoke({"goal": goal, "timeframe": timeframe})
         return {"plan_markdown": response.content, "error_message": None}
     except Exception as e:
-        print(f"Error during LLM call: {e}")
+        print(f"Error during LLM call (Groq): {e}")
         return {
-            "error_message": f"Failed to generate plan: {str(e)}",
+            "error_message": f"Failed to generate plan with Groq: {str(e)}",
             "plan_markdown": "",
-            "parsed_plan": [] # Ensure this key exists
+            "parsed_plan": []
         }
 
 # 2. Node to parse the Markdown plan into a structured format
+# This node (parse_plan_node) remains largely the same, as it processes markdown.
+# However, you MIGHT need to tweak the regex or logic if the chosen Groq model
+# formats its markdown output slightly differently than OpenAI's GPT models.
 def parse_plan_node(state: PlannerState):
     print("---PARSING PLAN---")
     markdown_text = state.get("plan_markdown")
-    if not markdown_text or state.get("error_message"): # If there was an error or no markdown, skip parsing
-        return {"parsed_plan": state.get("parsed_plan", [])} # Return existing parsed_plan or empty list
+    if not markdown_text or state.get("error_message"):
+        return {"parsed_plan": state.get("parsed_plan", [])}
 
     parsed_plan = []
     # Regex to find week titles and their subsequent tasks
-    # It captures "Week X: Title" and then everything until the next "## Week" or end of string
+    # It captures "## Week X: Title" and then everything until the next "## Week" or end of string
+    # Using re.DOTALL to make '.' match newlines as well, in case tasks span multiple lines before a new list item.
     week_sections = re.split(r'(?=^## Week \d+)', markdown_text, flags=re.MULTILINE)
 
     for section in week_sections:
@@ -86,25 +105,34 @@ def parse_plan_node(state: PlannerState):
         lines = section.split('\n')
         week_title_match = re.match(r'## (Week \d+[:\s]*(.*))', lines[0])
         if not week_title_match:
-            continue
-        
-        week_full_title = week_title_match.group(1).strip() # "Week X: Actual Title"
+            # Try a more lenient match if the title is just "## Week X"
+            week_title_match_simple = re.match(r'## (Week \d+)', lines[0])
+            if week_title_match_simple:
+                week_full_title = week_title_match_simple.group(1).strip()
+            else:
+                continue # Skip if no valid week header
+        else:
+            week_full_title = week_title_match.group(1).strip()
         
         tasks = []
         for line in lines[1:]:
             line = line.strip()
-            # Match lines starting with typical markdown list markers
             if line.startswith(("* ", "- ", "+ ")) or (len(line) > 2 and line[0].isdigit() and line[1] == '.'):
-                tasks.append(line[2:].strip()) # Remove marker and strip
-            elif line: # Add non-empty lines that are not headers as tasks
+                task_text = line[2:].strip()
+                if task_text: # Only add non-empty tasks
+                    tasks.append(task_text)
+            elif line and not line.startswith("##"): # Add non-empty lines that are not headers as tasks
                 tasks.append(line)
         
-        if tasks: # Only add week if it has tasks
+        if tasks:
             parsed_plan.append({"week_title": week_full_title, "tasks": tasks})
     
-    if not parsed_plan and markdown_text: # If parsing failed but there was markdown
+    if not parsed_plan and markdown_text:
         # Fallback: treat the whole markdown as a single "week" of general advice
-        parsed_plan.append({"week_title": "General Plan", "tasks": [line.strip() for line in markdown_text.split('\n') if line.strip()]})
+        # Split by newline, filter empty lines and markdown headers if any accidentally got in
+        fallback_tasks = [line.strip() for line in markdown_text.split('\n') if line.strip() and not line.startswith("#")]
+        if fallback_tasks:
+            parsed_plan.append({"week_title": "General Plan Outline", "tasks": fallback_tasks})
 
     return {"parsed_plan": parsed_plan}
 
@@ -127,28 +155,32 @@ async def create_plan(goal: str, timeframe: str) -> dict:
     inputs = {"goal": goal, "timeframe": timeframe, "plan_markdown": "", "parsed_plan": [], "error_message": None}
     try:
         result = await app_graph.ainvoke(inputs)
+        # Log the raw markdown if parsing fails, for easier debugging
+        if not result.get("parsed_plan") and result.get("plan_markdown") and not result.get("error_message"):
+            print("---PARSING MIGHT HAVE FAILED OR PRODUCED NO STRUCTURED DATA---")
+            print("Raw Markdown Output from LLM:")
+            print(result.get("plan_markdown"))
+            print("---END OF RAW MARKDOWN---")
+
         return {
             "plan": result.get("parsed_plan", []),
             "error_message": result.get("error_message")
         }
     except Exception as e:
-        print(f"Error in LangGraph execution: {e}")
+        print(f"Error in LangGraph execution with Groq: {e}")
         return {
             "plan": [],
-            "error_message": f"An unexpected error occurred: {str(e)}"
+            "error_message": f"An unexpected error occurred while generating your plan: {str(e)}"
         }
 
 if __name__ == '__main__':
-    # Example usage (for testing planner.py directly)
     import asyncio
 
     async def test_planner():
-        # test_goal = "Learn to play the guitar"
-        # test_timeframe = "3 months"
-        test_goal = "Write a fantasy novel"
-        test_timeframe = "6 months"
+        test_goal = "Learn intermediate Spanish"
+        test_timeframe = "3 months"
         
-        print(f"Generating plan for: '{test_goal}' in '{test_timeframe}'")
+        print(f"Generating plan for: '{test_goal}' in '{test_timeframe}' using Groq")
         result = await create_plan(test_goal, test_timeframe)
         
         if result["error_message"]:
@@ -160,6 +192,8 @@ if __name__ == '__main__':
                 for task in week_data['tasks']:
                     print(f"  - {task}")
         else:
-            print("\nNo plan generated and no error message.")
+            print("\nNo plan generated or an issue occurred, and no specific error message was set in the result.")
+            # This could happen if plan_markdown was generated but parsing resulted in an empty list
+            # and no error_message was explicitly set in the parse_plan_node for this case.
 
     asyncio.run(test_planner())
