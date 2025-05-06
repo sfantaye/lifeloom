@@ -351,9 +351,127 @@
             .week-card { padding: 20px; }
         }
 
+        #loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(26, 18, 47, 0.85); /* var(--dark-bg) with transparency */
+    backdrop-filter: blur(5px);
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#loader-overlay.show {
+    display: flex;
+    opacity: 1;
+}
+
+.loader-content {
+    text-align: center;
+}
+
+.loom-spinner {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    margin: 0 auto 20px auto;
+    /* animation: spin 2s linear infinite; /* Optional: spin the whole container */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loom-spinner .thread {
+    box-sizing: border-box;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border-style: solid;
+    border-width: 5px;
+    opacity: 0;
+}
+
+.loom-spinner .thread1 {
+    border-color: var(--primary-glow) transparent transparent transparent;
+    animation: weave1 1.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.loom-spinner .thread2 {
+    border-color: transparent var(--secondary-glow) transparent transparent;
+    animation: weave2 1.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    animation-delay: -0.45s;
+}
+
+.loom-spinner .thread3 {
+    border-color: transparent transparent var(--tertiary-glow) transparent;
+    animation: weave3 1.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    animation-delay: -0.9s;
+}
+.loom-spinner .thread4 {
+    border-color: transparent transparent transparent var(--primary-glow); /* Using primary for fourth for contrast */
+    animation: weave4 1.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    animation-delay: -1.35s;
+}
+
+
+@keyframes weave1 {
+    0% { transform: rotate(0deg) scale(0.8); opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { transform: rotate(360deg) scale(0.8); opacity: 0; }
+}
+@keyframes weave2 {
+    0% { transform: rotate(0deg) scale(0.6); opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { transform: rotate(360deg) scale(0.6); opacity: 0; }
+}
+@keyframes weave3 {
+    0% { transform: rotate(0deg) scale(0.4); opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { transform: rotate(360deg) scale(0.4); opacity: 0; }
+}
+ @keyframes weave4 {
+    0% { transform: rotate(0deg) scale(0.2); opacity: 0; }
+    25% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { transform: rotate(360deg) scale(0.2); opacity: 0; }
+}
+
+
+.loading-text {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--primary-glow);
+    font-size: 1.4em;
+    letter-spacing: 1px;
+    text-shadow: 0 0 5px var(--primary-glow);
+    margin-top: 20px;
+}
+
     </style>
 </head>
 <body>
+    <div id="loader-overlay">
+        <div class="loader-content">
+            <div class="loom-spinner">
+                <div class="thread thread1"></div>
+                <div class="thread thread2"></div>
+                <div class="thread thread3"></div>
+                <div class="thread thread4"></div>
+            </div>
+            <p class="loading-text"> Planning...</p>
+        </div>
+    </div>
     <div class="container">
         <header>
             <h1>LifeLoom <span class="sparkle">✨</span></h1>
@@ -411,5 +529,46 @@
             <p>© <script>document.write(new Date().getFullYear())</script> LifeLoom. <a href="https://github.com/sfantaye/lifeloom" target="_blank">View on GitHub</a> | Future Woven with Code & AI. By Sintayehu Fantaye</p>
         </footer>
     </div>
+
+    <script>
+        const goalForm = document.querySelector('.goal-form');
+        const loaderOverlay = document.getElementById('loader-overlay');
+        const submitButton = document.querySelector('.submit-btn');
+    
+        if (goalForm && loaderOverlay && submitButton) {
+            goalForm.addEventListener('submit', function(event) {
+                // Optional: Basic validation check. If inputs are empty, don't show loader immediately
+                // This is mostly for UX if you have client-side validation.
+                // HTML5 'required' attribute handles this mostly, but good for complex checks.
+                const goalInput = document.getElementById('goal');
+                const timeframeSelect = document.getElementById('timeframe');
+                if (!goalInput.value.trim() || !timeframeSelect.value) {
+                    // If HTML5 'required' attributes are working, this might not be strictly necessary
+                    // as the form won't submit. But if you add custom JS validation, this is useful.
+                    return;
+                }
+    
+                loaderOverlay.classList.add('show');
+                submitButton.disabled = true; // Disable button to prevent multiple submissions
+                submitButton.textContent = 'WEAVING...'; // Optional: change button text
+            });
+        }
+    
+        // If the user navigates back (e.g. using browser back button)
+        // after a plan was generated, the loader might still be visible.
+        // This attempts to hide it.
+        window.addEventListener('pageshow', function(event) {
+            if (loaderOverlay && loaderOverlay.classList.contains('show')) {
+                 // Check if the page was loaded from the bfcache (back/forward cache)
+                 if (event.persisted) {
+                     loaderOverlay.classList.remove('show');
+                     if(submitButton) {
+                         submitButton.disabled = false;
+                         submitButton.textContent = 'Plan My Destiny'; // Reset button text
+                     }
+                 }
+            }
+        });
+    </script>
 </body>
 </html>
