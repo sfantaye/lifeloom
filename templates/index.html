@@ -1,1 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeLoom - AI Goal Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LifeLoom ✨</h1>
+            <p>Turn your life goals into actionable weekly plans.</p>
+        </header>
 
+        <main>
+            <form action="/plan" method="post" class="goal-form">
+                <div class="form-group">
+                    <label for="goal">Your Goal:</label>
+                    <input type="text" id="goal" name="goal" placeholder="e.g., Learn Python for Data Science" required
+                           value="{{ goal_input if goal_input else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="timeframe">Timeframe:</label>
+                    <select id="timeframe" name="timeframe" required>
+                        <option value="1 week" {% if timeframe_input == '1 week' %}selected{% endif %}>1 Week</option>
+                        <option value="2 weeks" {% if timeframe_input == '2 weeks' %}selected{% endif %}>2 Weeks</option>
+                        <option value="1 month" {% if timeframe_input == '1 month' %}selected{% endif %}>1 Month</option>
+                        <option value="2 months" {% if timeframe_input == '2 months' %}selected{% endif %}>2 Months</option>
+                        <option value="3 months" {% if timeframe_input == '3 months' %}selected{% endif %}>3 Months</option>
+                        <option value="6 months" {% if timeframe_input == '6 months' %}selected{% endif %}>6 Months</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">Generate Plan</button>
+            </form>
+
+            {% if plan %}
+            <section class="plan-output">
+                <h2>Your Roadmap for: "{{ goal_input }}"</h2>
+                <div class="plan-details">
+                    {% for week_data in plan %}
+                    <div class="week-card">
+                        <h3>{{ week_data.week_title }}</h3>
+                        <ul>
+                            {% for task in week_data.tasks %}
+                            <li>{{ task }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% elif error_message %}
+            <section class="plan-output error-message">
+                <h2>Oops!</h2>
+                <p>{{ error_message }}</p>
+            </section>
+            {% endif %}
+        </main>
+
+        <footer>
+            <p>© 2024 LifeLoom. AI-Powered Planning.</p>
+        </footer>
+    </div>
+</body>
+</html>
